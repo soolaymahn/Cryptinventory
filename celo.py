@@ -42,7 +42,7 @@ class RewardRow(object):
 
 def parse_prices():
     prices_map = {}
-    price_csv = open("celo-prices.csv")
+    price_csv = open("input/celo-prices.csv")
     for line in price_csv:
         symbol, date, price = line.split(',')
         prices_map[symbol + date] = float(price)
@@ -50,10 +50,10 @@ def parse_prices():
 
 
 def parse_swaps(prices_map):
-    swaps_csv = open("ube-swaps")
+    swaps_csv = open("input/ube-swaps")
     swaps = []
     for line in swaps_csv:
-        date, asset1, asset2 = line.rstrip('\n').split()
+        date, asset1, asset2 = line.rstrip('\n').split(',')
         asset1_amount, asset1_symbol = asset1.split(' ')
         asset2_amount, asset2_symbol = asset2.split(' ')
         asset1_symbol = asset1_symbol.upper()
@@ -71,6 +71,10 @@ def get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, pr
         return asset1_amount
     if is_stable(asset2_symbol):
         return asset2_amount
+    if is_euro(asset1_symbol):
+        return float(asset1_amount) * 1.2
+    if is_euro(asset2_symbol):
+        return float(asset2_amount) * 1.2
     month, day = date.split("-2021")[0].split("-")
     if month == 'May':
         month = "05"
@@ -83,7 +87,6 @@ def get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, pr
         day = str(int(day) + 1)
         if int(day) < 10:
             day = '0' + day
-
     if asset2_symbol == 'CELO' or asset1_symbol not in ['CELO', 'UBE']:
         return prices_map[asset2_symbol + month + '-' + day] * float(asset2_amount)
     return prices_map[asset1_symbol + month + '-' + day] * float(asset1_amount)
@@ -95,8 +98,14 @@ def is_stable(symbol):
     return False
 
 
+def is_euro(symbol):
+    if symbol == 'CEUR' or symbol == 'MCEUR':
+        return True
+    return False
+
+
 def parse_liquidity(prices_map):
-    liquidity_csv = open("ube-liquidity")
+    liquidity_csv = open("input/ube-liquidity")
     liquids = []
     for line in liquidity_csv:
         if line == '\n':
@@ -113,11 +122,13 @@ def parse_liquidity(prices_map):
         if direction == '+':
             trade1 = TradeRow(date, 'SELL', asset1_amount, asset1_symbol, usd_value, 'USD')
             trade2 = TradeRow(date, 'SELL', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'BUY', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value, 'USD')
+            trade3 = TradeRow(date, 'BUY', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+                              'USD')
         else:
             trade1 = TradeRow(date, 'BUY', asset1_amount, asset1_symbol, usd_value, 'USD')
             trade2 = TradeRow(date, 'BUY', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'SELL', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value, 'USD')
+            trade3 = TradeRow(date, 'SELL', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+                              'USD')
 
         liquids.append(trade1)
         liquids.append(trade2)
@@ -126,14 +137,14 @@ def parse_liquidity(prices_map):
 
 
 def parse_rewards(prices_map):
-    rewards_csv = open("ube-rewards", "r")
+    rewards_csv = open("input/ube-rewards", "r")
     rewards = []
     reward_buys = []
     for line in rewards_csv.readlines():
         date, reward = line.split(',')
         reward_usd = get_usd_value(reward, 'UBE', 0, '', prices_map, date)
         # TODO: update bought at zero
-        trade = TradeRow(date, 'BUY', reward, 'UBE', reward_usd, 'USD')
+        trade = TradeRow(date, 'BUY', float(reward), 'UBE', 0, 'USD')
         reward = RewardRow(date, reward, 'UBE', reward_usd)
         rewards.append(reward)
         reward_buys.append(trade)
@@ -144,7 +155,6 @@ if __name__ == '__main__':
     pm = parse_prices()
     rewards, reward_buys = parse_rewards(pm)
     txns = parse_liquidity(pm) + parse_swaps(pm) + reward_buys
-    total = 0
     # with open('celo-rewards.csv', mode='w') as output:
     #     output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     #     for reward in rewards:
@@ -154,4 +164,3 @@ if __name__ == '__main__':
         output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for txn in txns:
             output.writerow(txn.to_row())
-    print(total)
