@@ -15,6 +15,7 @@ class TradeRow(object):
     def __init__(self, date, trade_type, in_amount, in_currency, out_amount, out_currency):
         dt = convert_date(date)
         dt += datetime.timedelta(hours=4)
+        self.dt = dt
         self.timestamp = dt.strftime("%Y-%m-%dT%H:%M:%S%z")
         self.trade_type = trade_type
         self.in_amount = in_amount
@@ -59,8 +60,8 @@ def parse_swaps(prices_map):
         asset1_symbol = asset1_symbol.upper()
         asset2_symbol = asset2_symbol.upper()
         usd_value = get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date)
-        trade1 = TradeRow(date, 'SELL', asset1_amount, asset1_symbol, usd_value, 'USD')
-        trade2 = TradeRow(date, 'BUY', asset2_amount, asset2_symbol, usd_value, 'USD')
+        trade1 = TradeRow(date, 'Sell', asset1_amount, asset1_symbol, usd_value, 'USD')
+        trade2 = TradeRow(date, 'Buy', asset2_amount, asset2_symbol, usd_value, 'USD')
         swaps.append(trade1)
         swaps.append(trade2)
     return swaps
@@ -120,14 +121,14 @@ def parse_liquidity(prices_map):
         usd_value = get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date)
 
         if direction == '+':
-            trade1 = TradeRow(date, 'SELL', asset1_amount, asset1_symbol, usd_value, 'USD')
-            trade2 = TradeRow(date, 'SELL', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'BUY', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+            trade1 = TradeRow(date, 'Sell', asset1_amount, asset1_symbol, usd_value, 'USD')
+            trade2 = TradeRow(date, 'Sell', asset2_amount, asset2_symbol, usd_value, 'USD')
+            trade3 = TradeRow(date, 'Buy', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
                               'USD')
         else:
-            trade1 = TradeRow(date, 'BUY', asset1_amount, asset1_symbol, usd_value, 'USD')
-            trade2 = TradeRow(date, 'BUY', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'SELL', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+            trade1 = TradeRow(date, 'Buy', asset1_amount, asset1_symbol, usd_value, 'USD')
+            trade2 = TradeRow(date, 'Buy', asset2_amount, asset2_symbol, usd_value, 'USD')
+            trade3 = TradeRow(date, 'Sell', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
                               'USD')
 
         liquids.append(trade1)
@@ -144,7 +145,7 @@ def parse_rewards(prices_map):
         date, reward = line.split(',')
         reward_usd = get_usd_value(reward, 'UBE', 0, '', prices_map, date)
         # TODO: update bought at zero
-        trade = TradeRow(date, 'BUY', float(reward), 'UBE', 0, 'USD')
+        trade = TradeRow(date, 'Buy', float(reward), 'UBE', 0, 'USD')
         reward = RewardRow(date, reward, 'UBE', reward_usd)
         rewards.append(reward)
         reward_buys.append(trade)
@@ -160,6 +161,7 @@ if __name__ == '__main__':
     #     for reward in rewards:
     #         total += float(reward.in_amount)
     #         output.writerow(reward.to_row())
+    txns = sorted(txns, key=lambda x: x.dt)
     with open('celo-trades.csv', mode='w') as output:
         output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for txn in txns:

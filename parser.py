@@ -87,6 +87,32 @@ if __name__ == '__main__':
                 out_currency = 'BTC'
                 out_amount = abs(float(total)) - float(fee)
                 fee_currency = 'BTC'
+            if product == 'WBTC-BTC':
+                btc_price = 37770.58
+                usd_total = abs(float(total)) * btc_price
+                usd_fee = abs(float(fee)) * btc_price
+                output.writerow(
+                    [timestamp, 'Sell', usd_total, 'USD', abs(float(total)), 'BTC', fee, 'USD',
+                     'Coinbase Pro',
+                     'Yes'])
+                output.writerow(
+                    [timestamp, 'Buy', size, 'WBTC', usd_total, 'USD', fee, 'USD',
+                     'Coinbase Pro',
+                     'Yes'])
+                continue
+            if product == 'MATIC-BTC':
+                btc_price = 34770.58
+                usd_total = abs(float(total)) * btc_price
+                usd_fee = abs(float(fee)) * btc_price
+                output.writerow(
+                    [timestamp, 'Sell', usd_total, 'USD', abs(float(total)), 'BTC', fee, 'USD',
+                     'Coinbase Pro',
+                     'Yes'])
+                output.writerow(
+                    [timestamp, 'Buy', size, 'MATIC', usd_total, 'USD', fee, 'USD',
+                     'Coinbase Pro',
+                     'Yes'])
+                continue
             else:
                 product_items = product.split('-')
                 fee_currency = 'USD'
@@ -102,7 +128,10 @@ if __name__ == '__main__':
                     out_currency = product_items[0]
                     out_amount = size
                     tradeType = 'Sell'
-
+            if in_currency == 'CGLD':
+                in_currency = 'CELO'
+            if out_currency == 'CGLD':
+                out_currency = 'CELO'
             output.writerow(
                 [timestamp, tradeType, in_amount, in_currency, out_amount, out_currency, fee, fee_currency,
                  'Coinbase Pro',

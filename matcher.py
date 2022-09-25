@@ -62,8 +62,9 @@ def parse_old_buys():
 def parse_new_tx():
     # TODO: combine all sources
     new_txn_csv = open("new_transactions.csv", "r")
+    celo_tx = open("output/celo-trades.csv", "r")
     asset_map = {}
-    for line in new_txn_csv.readlines():
+    for line in (new_txn_csv.readlines() + celo_tx.readlines()):
         row = TradeRow(line)
         if row.tradeType == 'Sell':
             map_currency = row.out_currency
