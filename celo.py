@@ -118,17 +118,19 @@ def parse_liquidity(prices_map):
         asset1_symbol = asset1_symbol.upper()
         asset2_symbol = asset2_symbol.upper()
         sorted_syms = sorted([asset1_symbol, asset2_symbol])
-        usd_value = get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date)
+        usd_value = float(get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date))
 
         if direction == '+':
             trade1 = TradeRow(date, 'Sell', asset1_amount, asset1_symbol, usd_value, 'USD')
             trade2 = TradeRow(date, 'Sell', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'Buy', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+            trade3 = TradeRow(date, 'Buy', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1],
+                              usd_value * 2,
                               'USD')
         else:
             trade1 = TradeRow(date, 'Buy', asset1_amount, asset1_symbol, usd_value, 'USD')
             trade2 = TradeRow(date, 'Buy', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'Sell', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1], usd_value,
+            trade3 = TradeRow(date, 'Sell', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1],
+                              usd_value * 2,
                               'USD')
 
         liquids.append(trade1)

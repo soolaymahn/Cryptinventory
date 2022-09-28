@@ -1,4 +1,7 @@
 import datetime
+import csv
+import functools
+from functools import reduce
 
 
 class TradeRow(object):
@@ -16,12 +19,19 @@ class TradeRow(object):
         if len(self.in_currency) > 0 and self.in_currency[0] == '"':
             self.in_currency = self.in_currency[1:-1]
         self.is2021 = False
+        if self.timestamp.startswith('2021'):
+            self.is2021 = True
         if self.ex == 'Coinbase Pro':
-            if self.timestamp.startswith('2021'):
-                self.is2021 = True
+            self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
             self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
         else:
+            self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z")
             self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z").timestamp()
+
+    def to_row(self):
+        return [self.dt.strftime("%Y-%m-%dT%H:%M:%S%z"), self.tradeType, self.in_amount, self.in_currency,
+                self.out_amount, self.out_currency,
+                self.fee, self.fee_currency, 'Coinbase', 'US']
 
 
 class DispositionRow(object):
@@ -31,7 +41,7 @@ class DispositionRow(object):
         self.date_sold = datetime.datetime.strptime(self.date_sold, "%m/%d/%Y").timestamp()
 
 
-class DispositionRow2(object):
+class OutputDispositionRow(object):
     def __init__(self, asset, rcv_dat, cost_basis, data_sold, proceeds, amount):
         self.asset = asset
         self.rcv_date = rcv_dat
@@ -40,13 +50,16 @@ class DispositionRow2(object):
         self.proceeds = proceeds
         self.amount = amount
 
+    def to_row(self):
+        return [self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds, self.amount]
+
 
 def parse_old():
     return parse_old_sells(parse_old_buys())
 
 
 def parse_old_buys():
-    old_txn_csv = open("old_transactions.csv", "r")
+    old_txn_csv = open("input/old_transactions.csv", "r")
     asset_map = {}
     for line in old_txn_csv.readlines():
         row = TradeRow(line)
@@ -62,9 +75,9 @@ def parse_old_buys():
 def parse_new_tx():
     # TODO: combine all sources
     new_txn_csv = open("new_transactions.csv", "r")
-    celo_tx = open("output/celo-trades.csv", "r")
+    # celo_tx = open("output/celo-trades.csv", "r")
     asset_map = {}
-    for line in (new_txn_csv.readlines() + celo_tx.readlines()):
+    for line in (new_txn_csv.readlines()):
         row = TradeRow(line)
         if row.tradeType == 'Sell':
             map_currency = row.out_currency
@@ -85,7 +98,7 @@ def sort_dispositions(dsp):
 
 
 def parse_old_sells(old_inventory):
-    old_dsp_csv = open("old_dispositions.csv", "r")
+    old_dsp_csv = open("input/old_dispositions.csv", "r")
     dsp_map = {}
     for line in old_dsp_csv.readlines():
         row = DispositionRow(line)
@@ -97,6 +110,7 @@ def parse_old_sells(old_inventory):
     sorted_dsp = {asset: sort_dispositions(dispositions) for asset, dispositions in dsp_map.items()}
 
     old_dsp2, old_inventory2 = optimistic_cancel(old_inventory, sorted_dsp)
+    write_list(old_inventory2, 'old-inventory.csv')
     return old_inventory2
     # return fifo_cancel(old_inventory2, old_dsp2)
 
@@ -141,7 +155,7 @@ def highest_basis_cancel(inventory):
     new_dispositions = {}
 
     for asset, txns in new_txns.items():
-        if asset not in ['CRV']: # For Testing
+        if asset not in ['CRV']:  # For Testing
             continue
         for row in txns:
             if row.tradeType == 'Buy':
@@ -149,9 +163,8 @@ def highest_basis_cancel(inventory):
                     inventory[row.in_currency] = [row]
                 else:
                     inventory[row.in_currency].append(row)
+                    inventory[row.in_currency].sort(key=lambda x: x.out_amount / x.in_amount, reverse=True)
             elif row.tradeType == 'Sell':
-                # (stretch): long term cap gains optimization
-                inventory[row.out_currency].sort(key=lambda x: x.out_amount/x.in_amount, reverse=True)
                 out_amount = row.out_amount
                 while out_amount > 0:
                     if len(inventory[row.out_currency]) == 0 and out_amount < 0.000001:
@@ -160,20 +173,21 @@ def highest_basis_cancel(inventory):
                     asset_buy = inventory[row.out_currency][0]
                     if out_amount < asset_buy.in_amount:
                         cost_basis = asset_buy.out_amount * (out_amount / asset_buy.in_amount)
-                        new_dsp = DispositionRow2(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
-                                                  cost_basis=cost_basis,
-                                                  data_sold=row.timestamp, proceeds=row.in_amount, amount=out_amount)
+                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
+                                                       cost_basis=cost_basis,
+                                                       data_sold=row.timestamp, proceeds=row.in_amount,
+                                                       amount=out_amount)
                         asset_buy.in_amount = asset_buy.in_amount - out_amount
                         asset_buy.out_amount = asset_buy.out_amount - cost_basis
                         out_amount = 0
                     else:
                         inventory[row.out_currency].pop(0)
                         proceeds = row.in_amount * (asset_buy.in_amount / out_amount)
-                        new_dsp = DispositionRow2(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
-                                                  cost_basis=asset_buy.out_amount,
-                                                  data_sold=row.timestamp,
-                                                  proceeds=proceeds,
-                                                  amount=asset_buy.in_amount)
+                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
+                                                       cost_basis=asset_buy.out_amount,
+                                                       data_sold=row.timestamp,
+                                                       proceeds=proceeds,
+                                                       amount=asset_buy.in_amount)
                         row.in_amount = row.in_amount - proceeds
                         out_amount = out_amount - asset_buy.in_amount
                     if row.out_currency in new_dispositions:
@@ -184,5 +198,19 @@ def highest_basis_cancel(inventory):
     return inventory, new_dispositions
 
 
+def write_list(txns, filename):
+    with open(filename, mode='w') as output:
+        output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        txn_list = reduce(lambda list, key: list + txns[key], txns, [])
+        for txn in txn_list:
+            output.writerow(txn.to_row())
+
+
 if __name__ == '__main__':
-    inventory, new_dispositions = highest_basis_cancel(parse_old())
+    parse_old()
+    # inventory, new_dispositions = highest_basis_cancel(parse_old())
+    # write_list(new_dispositions, 'new_dispositions_2021.csv')
+    # Check ETH, BTC
+    # WBTC, NFTs
+    # Check alts
+    # Celo
