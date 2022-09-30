@@ -3,24 +3,37 @@ import csv
 if __name__ == '__main__':
     pro_csv = open("output/pro.csv", "r")
     output = []
+    map = {}
     for line in pro_csv.readlines():
         timestamp, tradeType, in_amount, in_currency, out_amount, out_currency, \
         fee, fee_currency, ex, us = line.split(",")
-        if len(output) > 0:
-            timestamp2, tradeType2, in_amount2, in_currency2, out_amount2, out_currency2, \
-            fee2, fee_currency2, ex2, us2 = output[-1]
-            if timestamp2 == timestamp and tradeType2 == tradeType:
-                output.pop()
-                output.append([timestamp, tradeType, float(in_amount) + float(in_amount2), in_currency,
-                               float(out_amount) + float(out_amount2), out_currency, float(fee) + float(fee2),
-                               fee_currency, ex, "Yes"])
-                continue
 
-        output.append([timestamp, tradeType, float(in_amount), in_currency,
-                       float(out_amount), out_currency, float(fee),
-                       fee_currency, ex, "Yes"])
+        if timestamp in map and tradeType in map[timestamp]:
+            map[timestamp][tradeType].append(line)
+        elif timestamp in map:
+            map[timestamp][tradeType] = [line]
+        else:
+            map[timestamp] = {tradeType: [line]}
 
-    with open('output/output-abrv.csv', mode='w') as output_file:
+    for timestamp, tradeTypeMap in map.items():
+        for tradeType, lines in tradeTypeMap.items():
+            total_in = 0
+            total_out = 0
+            total_fee = 0
+            _, _, _, in_currency, _, out_currency, \
+            _, fee_currency, ex, us = lines[0].split(",")
+            for line in lines:
+                timestamp, tradeType, in_amount, in_currency, out_amount, out_currency, \
+                fee, fee_currency, ex, us = line.split(",")
+                total_in += float(in_amount)
+                total_out += float(out_amount)
+                total_fee += float(fee)
+            output.append([timestamp, tradeType, total_in, in_currency,
+                           total_out, out_currency, total_fee,
+                           fee_currency, ex, "Yes"])
+
+    output = sorted(output, key=lambda x: x[0])
+    with open('output/new.csv', mode='w') as output_file:
         output_file = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for line in output:
             output_file.writerow(line)

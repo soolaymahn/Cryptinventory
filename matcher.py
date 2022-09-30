@@ -44,14 +44,14 @@ class DispositionRow(object):
 class OutputDispositionRow(object):
     def __init__(self, asset, rcv_dat, cost_basis, data_sold, proceeds, amount):
         self.asset = asset
-        self.rcv_date = rcv_dat
-        self.cost_basis = cost_basis
-        self.date_sold = data_sold
-        self.proceeds = proceeds
+        self.rcv_date = rcv_dat.strftime("%m/%d/%Y")
+        self.cost_basis = round(cost_basis, 2)
+        self.date_sold = data_sold.strftime("%m/%d/%Y")
+        self.proceeds = round(proceeds, 2)
         self.amount = amount
 
     def to_row(self):
-        return [self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds, self.amount]
+        return [self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds]
 
 
 def parse_old():
@@ -74,7 +74,7 @@ def parse_old_buys():
 
 def parse_new_tx():
     # TODO: combine all sources
-    new_txn_csv = open("new_transactions.csv", "r")
+    new_txn_csv = open("output/new.csv", "r")
     # celo_tx = open("output/celo-trades.csv", "r")
     asset_map = {}
     for line in (new_txn_csv.readlines()):
@@ -155,7 +155,7 @@ def highest_basis_cancel(inventory):
     new_dispositions = {}
 
     for asset, txns in new_txns.items():
-        if asset not in ['CRV']:  # For Testing
+        if asset not in ['CRV', 'DOGE', 'AAVE', 'ICP', 'AXS', 'BTC']:  # For Testing
             continue
         for row in txns:
             if row.tradeType == 'Buy':
@@ -173,9 +173,9 @@ def highest_basis_cancel(inventory):
                     asset_buy = inventory[row.out_currency][0]
                     if out_amount < asset_buy.in_amount:
                         cost_basis = asset_buy.out_amount * (out_amount / asset_buy.in_amount)
-                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
+                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.dt,
                                                        cost_basis=cost_basis,
-                                                       data_sold=row.timestamp, proceeds=row.in_amount,
+                                                       data_sold=row.dt, proceeds=row.in_amount,
                                                        amount=out_amount)
                         asset_buy.in_amount = asset_buy.in_amount - out_amount
                         asset_buy.out_amount = asset_buy.out_amount - cost_basis
@@ -183,9 +183,9 @@ def highest_basis_cancel(inventory):
                     else:
                         inventory[row.out_currency].pop(0)
                         proceeds = row.in_amount * (asset_buy.in_amount / out_amount)
-                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.timestamp,
+                        new_dsp = OutputDispositionRow(asset=row.out_currency, rcv_dat=asset_buy.dt,
                                                        cost_basis=asset_buy.out_amount,
-                                                       data_sold=row.timestamp,
+                                                       data_sold=row.dt,
                                                        proceeds=proceeds,
                                                        amount=asset_buy.in_amount)
                         row.in_amount = row.in_amount - proceeds
@@ -208,8 +208,8 @@ def write_list(txns, filename):
 
 if __name__ == '__main__':
     parse_old()
-    # inventory, new_dispositions = highest_basis_cancel(parse_old())
-    # write_list(new_dispositions, 'new_dispositions_2021.csv')
+    inventory, new_dispositions = highest_basis_cancel(parse_old())
+    write_list(new_dispositions, 'new_dispositions_2021.csv')
     # Check ETH, BTC
     # WBTC, NFTs
     # Check alts
