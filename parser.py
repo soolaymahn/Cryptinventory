@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 out_amount = abs(float(total)) - float(fee)
                 fee_currency = 'BTC'
             if product == 'WBTC-BTC':
-                btc_price = 37770.58
+                btc_price = 47770.58
                 usd_total = abs(float(total)) * btc_price
                 usd_fee = abs(float(fee)) * btc_price
                 output.writerow(
@@ -101,7 +101,7 @@ if __name__ == '__main__':
                      'Yes'])
                 continue
             if product == 'MATIC-BTC':
-                btc_price = 34770.58
+                btc_price = 35000.58
                 usd_total = abs(float(total)) * btc_price
                 usd_fee = abs(float(fee)) * btc_price
                 output.writerow(

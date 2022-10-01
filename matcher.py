@@ -155,7 +155,7 @@ def highest_basis_cancel(inventory):
     new_dispositions = {}
 
     for asset, txns in new_txns.items():
-        if asset not in ['CRV', 'DOGE', 'AAVE', 'ICP', 'AXS', 'BTC']:  # For Testing
+        if asset not in ['CRV', 'DOGE', 'AAVE', 'ICP', 'AXS', 'BTC', 'ETH']:  # For Testing
             continue
         for row in txns:
             if row.tradeType == 'Buy':
