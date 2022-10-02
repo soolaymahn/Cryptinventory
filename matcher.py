@@ -5,7 +5,7 @@ from functools import reduce
 
 
 class TradeRow(object):
-    def __init__(self, line):
+    def __init__(self, line, is_new=False):
         self.timestamp, self.tradeType, self.in_amount, self.in_currency, self.out_amount, self.out_currency, \
         self.fee, self.fee_currency, self.ex, self.us = line.split(",")
         if self.in_amount != "":
@@ -21,12 +21,16 @@ class TradeRow(object):
         self.is2021 = False
         if self.timestamp.startswith('2021'):
             self.is2021 = True
-        if self.ex == 'Coinbase Pro':
-            self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
-            self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
+        if is_new:
+            self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S")
+            self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S").timestamp()
         else:
-            self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z")
-            self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z").timestamp()
+            if self.ex == 'Coinbase Pro':
+                self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z")
+                self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S.%f%z").timestamp()
+            else:
+                self.dt = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z")
+                self.timestamp = datetime.datetime.strptime(self.timestamp, "%Y-%m-%dT%H:%M:%S%z").timestamp()
 
     def to_row(self):
         return [self.dt.strftime("%Y-%m-%dT%H:%M:%S%z"), self.tradeType, self.in_amount, self.in_currency,
@@ -78,7 +82,7 @@ def parse_new_tx():
     # celo_tx = open("output/celo-trades.csv", "r")
     asset_map = {}
     for line in (new_txn_csv.readlines()):
-        row = TradeRow(line)
+        row = TradeRow(line, True)
         if row.tradeType == 'Sell':
             map_currency = row.out_currency
         else:
@@ -167,7 +171,8 @@ def highest_basis_cancel(inventory):
             elif row.tradeType == 'Sell':
                 out_amount = row.out_amount
                 while out_amount > 0:
-                    if len(inventory[row.out_currency]) == 0 and out_amount < 0.000001:
+                    if len(inventory[row.out_currency]):
+                        print('Out of buys', row.out_currency, out_amount)
                         out_amount = 0
                         continue
                     asset_buy = inventory[row.out_currency][0]
@@ -210,7 +215,4 @@ if __name__ == '__main__':
     parse_old()
     inventory, new_dispositions = highest_basis_cancel(parse_old())
     write_list(new_dispositions, 'new_dispositions_2021.csv')
-    # Check ETH, BTC
-    # WBTC, NFTs
-    # Check alts
     # Celo

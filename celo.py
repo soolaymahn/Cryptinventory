@@ -60,7 +60,7 @@ def parse_swaps(prices_map):
         asset1_symbol = asset1_symbol.upper()
         asset2_symbol = asset2_symbol.upper()
         usd_value = get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date)
-        trade1 = TradeRow(date, 'Sell', asset1_amount, asset1_symbol, usd_value, 'USD')
+        trade1 = TradeRow(date, 'Sell', usd_value, 'USD', asset1_amount, asset1_symbol)
         trade2 = TradeRow(date, 'Buy', asset2_amount, asset2_symbol, usd_value, 'USD')
         swaps.append(trade1)
         swaps.append(trade2)
@@ -121,17 +121,16 @@ def parse_liquidity(prices_map):
         usd_value = float(get_usd_value(asset1_amount, asset1_symbol, asset2_amount, asset2_symbol, prices_map, date))
 
         if direction == '+':
-            trade1 = TradeRow(date, 'Sell', asset1_amount, asset1_symbol, usd_value, 'USD')
-            trade2 = TradeRow(date, 'Sell', asset2_amount, asset2_symbol, usd_value, 'USD')
+            trade1 = TradeRow(date, 'Sell', usd_value, 'USD', asset1_amount, asset1_symbol)
+            trade2 = TradeRow(date, 'Sell', usd_value, 'USD', asset2_amount, asset2_symbol)
             trade3 = TradeRow(date, 'Buy', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1],
                               usd_value * 2,
                               'USD')
         else:
             trade1 = TradeRow(date, 'Buy', asset1_amount, asset1_symbol, usd_value, 'USD')
             trade2 = TradeRow(date, 'Buy', asset2_amount, asset2_symbol, usd_value, 'USD')
-            trade3 = TradeRow(date, 'Sell', ulp_amount, "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1],
-                              usd_value * 2,
-                              'USD')
+            trade3 = TradeRow(date, 'Sell', usd_value * 2, 'USD', ulp_amount,
+                              "ULP" + "-" + sorted_syms[0] + "-" + sorted_syms[1])
 
         liquids.append(trade1)
         liquids.append(trade2)
@@ -164,7 +163,7 @@ if __name__ == '__main__':
     #         total += float(reward.in_amount)
     #         output.writerow(reward.to_row())
     txns = sorted(txns, key=lambda x: x.dt)
-    with open('celo-trades.csv', mode='w') as output:
+    with open('output/celo-trades.csv', mode='w') as output:
         output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for txn in txns:
             output.writerow(txn.to_row())
