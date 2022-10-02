@@ -78,7 +78,7 @@ def parse_old_buys():
 
 def parse_new_tx():
     # TODO: combine all sources
-    new_txn_csv = open("output/new.csv", "r")
+    new_txn_csv = open("output/all-new.csv", "r")
     # celo_tx = open("output/celo-trades.csv", "r")
     asset_map = {}
     for line in (new_txn_csv.readlines()):

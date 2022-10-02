@@ -35,7 +35,7 @@ if __name__ == '__main__':
                            fee_currency, ex, "Yes"])
 
     output = sorted(output, key=lambda x: x[0])
-    with open('output/new.csv', mode='w') as output_file:
+    with open('output/cb-abbr.csv', mode='w') as output_file:
         output_file = csv.writer(output_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for line in output:
             output_file.writerow(line)
