@@ -51,7 +51,7 @@ class OutputDispositionRow(object):
         self.amount = amount
 
     def to_row(self):
-        return [self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds]
+        return [self.amount + ' ' + self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds]
 
 
 def parse_old():

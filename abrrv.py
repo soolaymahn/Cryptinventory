@@ -1,4 +1,5 @@
 import csv
+import datetime
 
 if __name__ == '__main__':
     pro_csv = open("output/pro.csv", "r")
@@ -28,7 +29,8 @@ if __name__ == '__main__':
                 total_in += float(in_amount)
                 total_out += float(out_amount)
                 total_fee += float(fee)
-            output.append([timestamp, tradeType, total_in, in_currency,
+            timestamp2 = datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f%z").strftime("%Y-%m-%dT%H:%M:%S")
+            output.append([timestamp2, tradeType, total_in, in_currency,
                            total_out, out_currency, total_fee,
                            fee_currency, ex, "Yes"])
 
