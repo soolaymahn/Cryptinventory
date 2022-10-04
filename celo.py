@@ -25,7 +25,7 @@ class TradeRow(object):
 
     def to_row(self):
         return [self.timestamp, self.trade_type, self.in_amount, self.in_currency, self.out_amount, self.out_currency,
-                'O', 'USD', 'Celo', 'US']
+                '0', 'USD', 'Celo', 'US']
 
 
 class RewardRow(object):

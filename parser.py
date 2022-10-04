@@ -3,7 +3,7 @@ import csv
 if __name__ == '__main__':
     pro = open("input/pro.csv", "r")
     # retail = open("retail.csv", "r")
-    with open('output/output.csv', mode='w') as output:
+    with open('output/cb-pro.csv', mode='w') as output:
         output = csv.writer(output, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         # for line in retail.readlines():
         #     if len(line.split(",")) > 9:

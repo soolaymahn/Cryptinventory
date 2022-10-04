@@ -13,11 +13,13 @@ class TradeRow(object):
         if self.out_amount != "":
             self.out_amount = float(self.out_amount)
         if self.tradeType == 'Sell':
-            self.in_amount = self.in_amount - float(self.fee)
+            self.in_amount = max(self.in_amount - float(self.fee), 0)
         elif self.tradeType == 'Buy':
             self.out_amount = self.out_amount + float(self.fee)
         if len(self.in_currency) > 0 and self.in_currency[0] == '"':
             self.in_currency = self.in_currency[1:-1]
+        self.in_currency = self.in_currency.strip()
+        self.out_currency = self.out_currency.strip()
         self.is2021 = False
         if self.timestamp.startswith('2021'):
             self.is2021 = True
@@ -55,7 +57,7 @@ class OutputDispositionRow(object):
         self.amount = amount
 
     def to_row(self):
-        return [self.amount + ' ' + self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds]
+        return [str(self.amount) + ' ' + self.asset, self.rcv_date, self.cost_basis, self.date_sold, self.proceeds]
 
 
 def parse_old():
@@ -114,7 +116,7 @@ def parse_old_sells(old_inventory):
     sorted_dsp = {asset: sort_dispositions(dispositions) for asset, dispositions in dsp_map.items()}
 
     old_dsp2, old_inventory2 = optimistic_cancel(old_inventory, sorted_dsp)
-    write_list(old_inventory2, 'old-inventory.csv')
+    write_list(old_inventory2, 'output/old-inventory.csv')
     return old_inventory2
     # return fifo_cancel(old_inventory2, old_dsp2)
 
@@ -159,7 +161,10 @@ def highest_basis_cancel(inventory):
     new_dispositions = {}
 
     for asset, txns in new_txns.items():
-        if asset not in ['CRV', 'DOGE', 'AAVE', 'ICP', 'AXS', 'BTC', 'ETH']:  # For Testing
+        tracked_assets = ['CRV', 'DOGE', 'AAVE', 'ICP', 'AXS', 'BTC', 'SB', 'ETH', 'MATIC', 'MEME', 'SOL']
+        celo_assets = ['CELO', 'UBE', 'CMCO2', 'ULP-MCUSD-UBE', 'ULP-MCEUR-UBE', 'ULP-CMCO2-UBE', 'ULP-CELO-UBE']
+        tracked_assets += celo_assets
+        if asset not in tracked_assets:  # For Testing
             continue
         for row in txns:
             if row.tradeType == 'Buy':
@@ -171,7 +176,7 @@ def highest_basis_cancel(inventory):
             elif row.tradeType == 'Sell':
                 out_amount = row.out_amount
                 while out_amount > 0:
-                    if len(inventory[row.out_currency]):
+                    if len(inventory[row.out_currency]) == 0:
                         print('Out of buys', row.out_currency, out_amount)
                         out_amount = 0
                         continue
@@ -214,5 +219,5 @@ def write_list(txns, filename):
 if __name__ == '__main__':
     parse_old()
     inventory, new_dispositions = highest_basis_cancel(parse_old())
-    write_list(new_dispositions, 'new_dispositions_2021.csv')
+    write_list(new_dispositions, 'output/new_dispositions_2021.csv')
     # Celo

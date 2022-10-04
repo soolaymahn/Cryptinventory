@@ -2,7 +2,7 @@ import csv
 import datetime
 
 if __name__ == '__main__':
-    pro_csv = open("output/pro.csv", "r")
+    pro_csv = open("output/cb-pro.csv", "r")
     output = []
     map = {}
     for line in pro_csv.readlines():
